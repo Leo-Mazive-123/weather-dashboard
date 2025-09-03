@@ -1,10 +1,25 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
+
+interface Weather {
+  name: string;
+  weather: { main: string; description: string; icon: string }[];
+  main: { temp: number; temp_min: number; temp_max: number; humidity: number };
+  wind: { speed: number };
+}
+
+interface ForecastItem {
+  dt: number;
+  main: { temp: number; temp_min: number; temp_max: number };
+  weather: { main: string; description: string; icon: string }[];
+  dt_txt: string;
+}
 
 export default function Home() {
   const [city, setCity] = useState("");
-  const [weather, setWeather] = useState<any>(null);
-  const [forecast, setForecast] = useState<any[]>([]);
+  const [weather, setWeather] = useState<Weather | null>(null);
+  const [forecast, setForecast] = useState<ForecastItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -31,9 +46,9 @@ export default function Home() {
       const weatherRes = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
       );
-      const weatherData = await weatherRes.json();
+      const weatherData: Weather & { cod: number } = await weatherRes.json();
 
-      if (weatherData.cod === "404" || weatherData.cod === 404) {
+      if (weatherData.cod === 404) {
         setWeather(null);
         setForecast([]);
         setHasSearched(false);
@@ -42,18 +57,18 @@ export default function Home() {
         return;
       }
 
-      if (weatherData.cod !== 200) throw new Error(weatherData.message);
+      if (weatherData.cod !== 200) throw new Error("Failed to fetch weather");
 
       setWeather(weatherData);
 
       const forecastRes = await fetch(
         `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`
       );
-      const forecastData = await forecastRes.json();
+      const forecastData: { list: ForecastItem[]; cod: string } = await forecastRes.json();
 
-      if (forecastData.cod !== "200") throw new Error(forecastData.message);
+      if (forecastData.cod !== "200") throw new Error("Failed to fetch forecast");
 
-      const dailyForecast = forecastData.list.filter((item: any) =>
+      const dailyForecast = forecastData.list.filter((item) =>
         item.dt_txt.includes("12:00:00")
       );
       setForecast(dailyForecast);
@@ -62,7 +77,7 @@ export default function Home() {
       setWeather(null);
       setForecast([]);
       setHasSearched(false);
-      setErrorMsg(error.message);
+      setErrorMsg(error.message || "Error fetching data");
     } finally {
       setLoading(false);
     }
@@ -76,130 +91,120 @@ export default function Home() {
     setErrorMsg("");
   };
 
-        return (
-        <main
-          className={`flex items-center justify-center min-h-screen w-full text-white transition-colors duration-1000`}
-          style={{
-            backgroundImage: !hasSearched ? "url('/weather.png')" : undefined,
-            backgroundSize: !hasSearched ? "cover" : undefined,
-            backgroundPosition: !hasSearched ? "center" : undefined,
-            backgroundAttachment: !hasSearched ? "fixed" : undefined,
-          }}
-        >
-          {/* Wrapper that fills the whole page */}
-          <div
-            className={`relative flex flex-col items-center justify-center w-full min-h-screen p-6 ${
-              hasSearched ? `bg-gradient-to-br ${getBackgroundClass()}` : ""
-            }`}
+  return (
+    <main
+      className="flex items-center justify-center min-h-screen w-full text-white transition-colors duration-1000"
+      style={{
+        backgroundImage: !hasSearched ? "url('/weather.png')" : undefined,
+        backgroundSize: !hasSearched ? "cover" : undefined,
+        backgroundPosition: !hasSearched ? "center" : undefined,
+        backgroundAttachment: !hasSearched ? "fixed" : undefined,
+      }}
+    >
+      <div
+        className={`relative flex flex-col items-center justify-center w-full min-h-screen p-6 ${
+          hasSearched ? `bg-gradient-to-br ${getBackgroundClass()}` : ""
+        }`}
+      >
+        {hasSearched && (
+          <button
+            onClick={handleBack}
+            className="absolute top-4 sm:top-6 left-2 sm:left-4 md:left-8 bg-white text-black px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-semibold shadow-md hover:bg-gray-200 transition z-10 text-sm sm:text-base"
           >
-            {/* Back button */}
-            {hasSearched && (
-              <button
-                onClick={handleBack}
-                className="absolute top-4 sm:top-6 left-2 sm:left-4 md:left-8 bg-white text-black px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-semibold shadow-md hover:bg-gray-200 transition z-10 text-sm sm:text-base"
+            ← Back
+          </button>
+        )}
 
-              >
-                ← Back
-              </button>
-            )}               
+        <h1 className="text-3xl md:text-4xl font-bold mb-6 drop-shadow-lg text-center">
+          🌦 Weather Dashboard <span className="text-sm italic">with Leo</span>
+        </h1>
 
-           <h1 className="text-3xl md:text-4xl font-bold mb-6 drop-shadow-lg text-center">
-            🌦 Weather Dashboard <span className="text-sm italic">with Leo</span>
-          </h1>
+        <div className="flex flex-col sm:flex-row gap-2 mb-6 w-full max-w-md justify-center">
+          <input
+            type="text"
+            placeholder="Enter city"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className="px-4 py-2 w-full rounded-full focus:outline-none text-black shadow-md bg-white"
+          />
+          <button
+            onClick={fetchWeather}
+            className="bg-[#547fdd] hover:bg-blue-500 text-white px-4 py-2 rounded-full font-semibold shadow-md transition-transform transform hover:scale-105 w-full sm:w-auto"
+          >
+            Search
+          </button>
+        </div>
 
+        {errorMsg && <p className="text-red-500 mb-4 font-semibold text-center">{errorMsg}</p>}
+        {loading && <p className="mb-4 text-lg font-semibold">Loading...</p>}
 
-            {/* Search */}
-            <div className="flex flex-col sm:flex-row gap-2 mb-6 w-full max-w-md justify-center">
-              <input
-                type="text"
-                placeholder="Enter city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="px-4 py-2 w-full rounded-full focus:outline-none text-black shadow-md bg-white"
-              />
-              <button
-                onClick={fetchWeather}
-                className="bg-[#547fdd] hover:bg-blue-500 text-white px-4 py-2 rounded-full font-semibold shadow-md transition-transform transform hover:scale-105 w-full sm:w-auto"
-              >
-                Search
-              </button>
+        {weather && (
+          <div className="bg-white/20 backdrop-blur-md rounded-3xl p-6 shadow-xl text-center w-full max-w-[320px] mb-6 transition-all duration-500">
+            <h2 className="text-2xl font-bold">{weather.name}</h2>
+            <p className="capitalize text-lg">{weather.weather[0].description}</p>
+            <Image
+              src={`https://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png`}
+              alt={weather.weather[0].description}
+              width={100}
+              height={100}
+              className="mx-auto"
+            />
+            <p className="text-5xl font-bold my-2">{Math.round(weather.main.temp)}°C</p>
+            <div className="flex justify-center gap-6 mt-4">
+              <div>
+                <p className="font-semibold">{weather.main.humidity}%</p>
+                <p className="text-sm">Humidity</p>
+              </div>
+              <div>
+                <p className="font-semibold">{weather.wind.speed} m/s</p>
+                <p className="text-sm">Wind</p>
+              </div>
             </div>
-
-            {/* Error message */}
-            {errorMsg && <p className="text-red-500 mb-4 font-semibold text-center">{errorMsg}</p>}
-
-            {/* Loading */}
-            {loading && <p className="mb-4 text-lg font-semibold">Loading...</p>}
-
-            {/* Weather Card */}
-            {weather && (
-              <div className="bg-white/20 backdrop-blur-md rounded-3xl p-6 shadow-xl text-center w-full max-w-[320px] mb-6 transition-all duration-500">
-                <h2 className="text-2xl font-bold">{weather.name}</h2>
-                <p className="capitalize text-lg">{weather.weather[0].description}</p>
-                <img
-                  src={`https://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png`}
-                  alt={weather.weather[0].description}
-                  className="mx-auto"
-                />
-                <p className="text-5xl font-bold my-2">{Math.round(weather.main.temp)}°C</p>
-                <div className="flex justify-center gap-6 mt-4">
-                  <div>
-                    <p className="font-semibold">{weather.main.humidity}%</p>
-                    <p className="text-sm">Humidity</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold">{weather.wind.speed} m/s</p>
-                    <p className="text-sm">Wind</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Forecast Cards */}
-            {forecast.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-3 sm:gap-4 py-4 px-2 w-full max-w-5xl">
-                {forecast.map((day, index) => {
-                  const weatherMain = day.weather[0].main.toLowerCase();
-                  let cardBg = "bg-white/20";
-                  if (weatherMain.includes("cloud")) cardBg = "bg-gray-300/30";
-                  if (weatherMain.includes("rain")) cardBg = "bg-blue-300/30";
-                  if (weatherMain.includes("snow")) cardBg = "bg-white/40";
-                  if (weatherMain.includes("clear")) cardBg = "bg-yellow-300/30";
-
-                  return (
-                    <div
-                      key={index}
-                      className={`${cardBg} backdrop-blur-md rounded-2xl p-4 shadow-lg min-w-[140px] sm:w-36 text-center flex-shrink-0 hover:scale-105 transition-transform duration-300`}
-                    >
-                      <p className="font-semibold text-xs sm:text-sm">
-                        {new Date(day.dt * 1000).toLocaleDateString(undefined, {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </p>
-                      <img
-                        src={`https://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png`}
-                        alt={day.weather[0].description}
-                        className="mx-auto w-12 h-12 sm:w-16 sm:h-16"
-                      />
-                      <p className="font-bold text-base sm:text-lg my-1">
-                        {Math.round(day.main.temp)}°C
-                      </p>
-                      <p className="text-[10px] sm:text-xs capitalize">
-                        {day.weather[0].description}
-                      </p>
-                      <p className="text-[10px] sm:text-xs mt-1">
-                        Min: {Math.round(day.main.temp_min)}°C | Max:{" "}
-                        {Math.round(day.main.temp_max)}°C
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
-        </main>
-      );
+        )}
 
+        {forecast.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-4 py-4 px-2 w-full max-w-5xl">
+            {forecast.map((day, index) => {
+              const weatherMain = day.weather[0].main.toLowerCase();
+              let cardBg = "bg-white/20";
+              if (weatherMain.includes("cloud")) cardBg = "bg-gray-300/30";
+              if (weatherMain.includes("rain")) cardBg = "bg-blue-300/30";
+              if (weatherMain.includes("snow")) cardBg = "bg-white/40";
+              if (weatherMain.includes("clear")) cardBg = "bg-yellow-300/30";
+
+              return (
+                <div
+                  key={index}
+                  className={`${cardBg} backdrop-blur-md rounded-2xl p-4 shadow-lg min-w-[140px] sm:w-36 text-center flex-shrink-0 hover:scale-105 transition-transform duration-300`}
+                >
+                  <p className="font-semibold text-xs sm:text-sm">
+                    {new Date(day.dt * 1000).toLocaleDateString(undefined, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                  <Image
+                    src={`https://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png`}
+                    alt={day.weather[0].description}
+                    width={64}
+                    height={64}
+                    className="mx-auto"
+                  />
+                  <p className="font-bold text-base sm:text-lg my-1">
+                    {Math.round(day.main.temp)}°C
+                  </p>
+                  <p className="text-[10px] sm:text-xs capitalize">{day.weather[0].description}</p>
+                  <p className="text-[10px] sm:text-xs mt-1">
+                    Min: {Math.round(day.main.temp_min)}°C | Max: {Math.round(day.main.temp_max)}°C
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </main>
+  );
 }
