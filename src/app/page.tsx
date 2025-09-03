@@ -1,103 +1,205 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [city, setCity] = useState("");
+  const [weather, setWeather] = useState<any>(null);
+  const [forecast, setForecast] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const apiKey = "19797197dc030039d6a2322661d273a2";
+
+  const getBackgroundClass = () => {
+    if (!weather) return "from-blue-400 to-indigo-600";
+    const main = weather.weather[0].main.toLowerCase();
+    if (main.includes("cloud")) return "from-gray-500 to-gray-700";
+    if (main.includes("rain") || main.includes("drizzle"))
+      return "from-blue-700 to-gray-800";
+    if (main.includes("snow")) return "from-white to-gray-300";
+    if (main.includes("clear")) return "from-yellow-400 to-orange-500";
+    return "from-blue-400 to-indigo-600";
+  };
+
+  const fetchWeather = async () => {
+    if (!city) return;
+    setLoading(true);
+    setErrorMsg("");
+
+    try {
+      const weatherRes = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
+      );
+      const weatherData = await weatherRes.json();
+
+      if (weatherData.cod === "404" || weatherData.cod === 404) {
+        setWeather(null);
+        setForecast([]);
+        setHasSearched(false);
+        setErrorMsg("City not found. Please try another city.");
+        setLoading(false);
+        return;
+      }
+
+      if (weatherData.cod !== 200) throw new Error(weatherData.message);
+
+      setWeather(weatherData);
+
+      const forecastRes = await fetch(
+        `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`
+      );
+      const forecastData = await forecastRes.json();
+
+      if (forecastData.cod !== "200") throw new Error(forecastData.message);
+
+      const dailyForecast = forecastData.list.filter((item: any) =>
+        item.dt_txt.includes("12:00:00")
+      );
+      setForecast(dailyForecast);
+      setHasSearched(true);
+    } catch (error: any) {
+      setWeather(null);
+      setForecast([]);
+      setHasSearched(false);
+      setErrorMsg(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    setHasSearched(false);
+    setWeather(null);
+    setForecast([]);
+    setCity("");
+    setErrorMsg("");
+  };
+
+        return (
+        <main
+          className={`flex items-center justify-center min-h-screen w-full text-white transition-colors duration-1000`}
+          style={{
+            backgroundImage: !hasSearched ? "url('/weather.png')" : undefined,
+            backgroundSize: !hasSearched ? "cover" : undefined,
+            backgroundPosition: !hasSearched ? "center" : undefined,
+            backgroundAttachment: !hasSearched ? "fixed" : undefined,
+          }}
+        >
+          {/* Wrapper that fills the whole page */}
+          <div
+            className={`relative flex flex-col items-center justify-center w-full min-h-screen p-6 ${
+              hasSearched ? `bg-gradient-to-br ${getBackgroundClass()}` : ""
+            }`}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+            {/* Back button */}
+            {hasSearched && (
+              <button
+                onClick={handleBack}
+                className="absolute top-4 sm:top-6 left-2 sm:left-4 md:left-8 bg-white text-black px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-semibold shadow-md hover:bg-gray-200 transition z-10 text-sm sm:text-base"
+
+              >
+                ← Back
+              </button>
+            )}               
+
+           <h1 className="text-3xl md:text-4xl font-bold mb-6 drop-shadow-lg text-center">
+            🌦 Weather Dashboard <span className="text-sm italic">with Leo</span>
+          </h1>
+
+
+            {/* Search */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-6 w-full max-w-md justify-center">
+              <input
+                type="text"
+                placeholder="Enter city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="px-4 py-2 w-full rounded-full focus:outline-none text-black shadow-md bg-white"
+              />
+              <button
+                onClick={fetchWeather}
+                className="bg-[#547fdd] hover:bg-blue-500 text-white px-4 py-2 rounded-full font-semibold shadow-md transition-transform transform hover:scale-105 w-full sm:w-auto"
+              >
+                Search
+              </button>
+            </div>
+
+            {/* Error message */}
+            {errorMsg && <p className="text-red-500 mb-4 font-semibold text-center">{errorMsg}</p>}
+
+            {/* Loading */}
+            {loading && <p className="mb-4 text-lg font-semibold">Loading...</p>}
+
+            {/* Weather Card */}
+            {weather && (
+              <div className="bg-white/20 backdrop-blur-md rounded-3xl p-6 shadow-xl text-center w-full max-w-[320px] mb-6 transition-all duration-500">
+                <h2 className="text-2xl font-bold">{weather.name}</h2>
+                <p className="capitalize text-lg">{weather.weather[0].description}</p>
+                <img
+                  src={`https://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png`}
+                  alt={weather.weather[0].description}
+                  className="mx-auto"
+                />
+                <p className="text-5xl font-bold my-2">{Math.round(weather.main.temp)}°C</p>
+                <div className="flex justify-center gap-6 mt-4">
+                  <div>
+                    <p className="font-semibold">{weather.main.humidity}%</p>
+                    <p className="text-sm">Humidity</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold">{weather.wind.speed} m/s</p>
+                    <p className="text-sm">Wind</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Forecast Cards */}
+            {forecast.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-3 sm:gap-4 py-4 px-2 w-full max-w-5xl">
+                {forecast.map((day, index) => {
+                  const weatherMain = day.weather[0].main.toLowerCase();
+                  let cardBg = "bg-white/20";
+                  if (weatherMain.includes("cloud")) cardBg = "bg-gray-300/30";
+                  if (weatherMain.includes("rain")) cardBg = "bg-blue-300/30";
+                  if (weatherMain.includes("snow")) cardBg = "bg-white/40";
+                  if (weatherMain.includes("clear")) cardBg = "bg-yellow-300/30";
+
+                  return (
+                    <div
+                      key={index}
+                      className={`${cardBg} backdrop-blur-md rounded-2xl p-4 shadow-lg min-w-[140px] sm:w-36 text-center flex-shrink-0 hover:scale-105 transition-transform duration-300`}
+                    >
+                      <p className="font-semibold text-xs sm:text-sm">
+                        {new Date(day.dt * 1000).toLocaleDateString(undefined, {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
+                      <img
+                        src={`https://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png`}
+                        alt={day.weather[0].description}
+                        className="mx-auto w-12 h-12 sm:w-16 sm:h-16"
+                      />
+                      <p className="font-bold text-base sm:text-lg my-1">
+                        {Math.round(day.main.temp)}°C
+                      </p>
+                      <p className="text-[10px] sm:text-xs capitalize">
+                        {day.weather[0].description}
+                      </p>
+                      <p className="text-[10px] sm:text-xs mt-1">
+                        Min: {Math.round(day.main.temp_min)}°C | Max:{" "}
+                        {Math.round(day.main.temp_max)}°C
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </main>
+      );
+
 }
