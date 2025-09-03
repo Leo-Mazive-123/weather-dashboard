@@ -1,10 +1,9 @@
 "use client";
 import { useState } from "react";
-import Image from "next/image";
 
 interface WeatherData {
   name: string;
-  cod?: string | number; // optional to handle API error responses
+  cod?: string | number;
   main: {
     temp: number;
     temp_min: number;
@@ -171,13 +170,6 @@ export default function Home() {
           <div className="bg-white/20 backdrop-blur-md rounded-3xl p-6 shadow-xl text-center w-full max-w-[320px] mb-6 transition-all duration-500">
             <h2 className="text-2xl font-bold">{weather.name}</h2>
             <p className="capitalize text-lg">{weather.weather[0].description}</p>
-            <Image
-              src={`https://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png`}
-              alt={weather.weather[0].description}
-              width={100}
-              height={100}
-              className="mx-auto"
-            />
             <p className="text-5xl font-bold my-2">{Math.round(weather.main.temp)}°C</p>
             <div className="flex justify-center gap-6 mt-4">
               <div>
@@ -214,13 +206,6 @@ export default function Home() {
                       day: "numeric",
                     })}
                   </p>
-                  <Image
-                    src={`https://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png`}
-                    alt={day.weather[0].description}
-                    width={64}
-                    height={64}
-                    className="mx-auto"
-                  />
                   <p className="font-bold text-base sm:text-lg my-1">
                     {Math.round(day.main.temp)}°C
                   </p>
@@ -237,3 +222,4 @@ export default function Home() {
     </main>
   );
 }
+
