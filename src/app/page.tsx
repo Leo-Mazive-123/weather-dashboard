@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 
 interface WeatherData {
   name: string;
   weather: { main: string; description: string; icon: string }[];
   main: { temp: number; temp_min: number; temp_max: number; humidity: number };
   wind: { speed: number };
+  cod: number;
 }
 
 interface ForecastItem {
@@ -13,6 +15,11 @@ interface ForecastItem {
   dt_txt: string;
   main: { temp: number; temp_min: number; temp_max: number };
   weather: { main: string; description: string; icon: string }[];
+}
+
+interface ForecastData {
+  cod: string;
+  list: ForecastItem[];
 }
 
 export default function Home() {
@@ -45,7 +52,7 @@ export default function Home() {
       const weatherRes = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
       );
-      const weatherData: WeatherData & { cod: number } = await weatherRes.json();
+      const weatherData: WeatherData = await weatherRes.json();
 
       if (weatherData.cod === 404) {
         setWeather(null);
@@ -63,7 +70,7 @@ export default function Home() {
       const forecastRes = await fetch(
         `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`
       );
-      const forecastData: { list: ForecastItem[]; cod: string } = await forecastRes.json();
+      const forecastData: ForecastData = await forecastRes.json();
 
       if (forecastData.cod !== "200") throw new Error("Failed to fetch forecast");
 
@@ -143,9 +150,11 @@ export default function Home() {
           <div className="bg-white/20 backdrop-blur-md rounded-3xl p-6 shadow-xl text-center w-full max-w-[320px] mb-6 transition-all duration-500">
             <h2 className="text-2xl font-bold">{weather.name}</h2>
             <p className="capitalize text-lg">{weather.weather[0].description}</p>
-            <img
+            <Image
               src={`https://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png`}
               alt={weather.weather[0].description}
+              width={100}
+              height={100}
               className="mx-auto"
             />
             <p className="text-5xl font-bold my-2">{Math.round(weather.main.temp)}°C</p>
@@ -184,14 +193,14 @@ export default function Home() {
                       day: "numeric",
                     })}
                   </p>
-                  <img
+                  <Image
                     src={`https://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png`}
                     alt={day.weather[0].description}
-                    className="mx-auto w-12 h-12 sm:w-16 sm:h-16"
+                    width={64}
+                    height={64}
+                    className="mx-auto"
                   />
-                  <p className="font-bold text-base sm:text-lg my-1">
-                    {Math.round(day.main.temp)}°C
-                  </p>
+                  <p className="font-bold text-base sm:text-lg my-1">{Math.round(day.main.temp)}°C</p>
                   <p className="text-[10px] sm:text-xs capitalize">{day.weather[0].description}</p>
                   <p className="text-[10px] sm:text-xs mt-1">
                     Min: {Math.round(day.main.temp_min)}°C | Max: {Math.round(day.main.temp_max)}°C
