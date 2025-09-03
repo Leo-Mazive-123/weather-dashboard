@@ -1,8 +1,7 @@
 "use client";
 import { useState } from "react";
-import Image from "next/image";
 
-interface Weather {
+interface WeatherData {
   name: string;
   weather: { main: string; description: string; icon: string }[];
   main: { temp: number; temp_min: number; temp_max: number; humidity: number };
@@ -11,18 +10,18 @@ interface Weather {
 
 interface ForecastItem {
   dt: number;
+  dt_txt: string;
   main: { temp: number; temp_min: number; temp_max: number };
   weather: { main: string; description: string; icon: string }[];
-  dt_txt: string;
 }
 
 export default function Home() {
-  const [city, setCity] = useState("");
-  const [weather, setWeather] = useState<Weather | null>(null);
+  const [city, setCity] = useState<string>("");
+  const [weather, setWeather] = useState<WeatherData | null>(null);
   const [forecast, setForecast] = useState<ForecastItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [hasSearched, setHasSearched] = useState<boolean>(false);
+  const [errorMsg, setErrorMsg] = useState<string>("");
 
   const apiKey = "19797197dc030039d6a2322661d273a2";
 
@@ -46,7 +45,7 @@ export default function Home() {
       const weatherRes = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
       );
-      const weatherData: Weather & { cod: number } = await weatherRes.json();
+      const weatherData: WeatherData & { cod: number } = await weatherRes.json();
 
       if (weatherData.cod === 404) {
         setWeather(null);
@@ -68,16 +67,17 @@ export default function Home() {
 
       if (forecastData.cod !== "200") throw new Error("Failed to fetch forecast");
 
-      const dailyForecast = forecastData.list.filter((item) =>
-        item.dt_txt.includes("12:00:00")
+      const dailyForecast = forecastData.list.filter(
+        (item: ForecastItem) => item.dt_txt.includes("12:00:00")
       );
+
       setForecast(dailyForecast);
       setHasSearched(true);
     } catch (error: any) {
       setWeather(null);
       setForecast([]);
       setHasSearched(false);
-      setErrorMsg(error.message || "Error fetching data");
+      setErrorMsg(error.message);
     } finally {
       setLoading(false);
     }
@@ -136,17 +136,16 @@ export default function Home() {
         </div>
 
         {errorMsg && <p className="text-red-500 mb-4 font-semibold text-center">{errorMsg}</p>}
+
         {loading && <p className="mb-4 text-lg font-semibold">Loading...</p>}
 
         {weather && (
           <div className="bg-white/20 backdrop-blur-md rounded-3xl p-6 shadow-xl text-center w-full max-w-[320px] mb-6 transition-all duration-500">
             <h2 className="text-2xl font-bold">{weather.name}</h2>
             <p className="capitalize text-lg">{weather.weather[0].description}</p>
-            <Image
+            <img
               src={`https://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png`}
               alt={weather.weather[0].description}
-              width={100}
-              height={100}
               className="mx-auto"
             />
             <p className="text-5xl font-bold my-2">{Math.round(weather.main.temp)}°C</p>
@@ -185,12 +184,10 @@ export default function Home() {
                       day: "numeric",
                     })}
                   </p>
-                  <Image
+                  <img
                     src={`https://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png`}
                     alt={day.weather[0].description}
-                    width={64}
-                    height={64}
-                    className="mx-auto"
+                    className="mx-auto w-12 h-12 sm:w-16 sm:h-16"
                   />
                   <p className="font-bold text-base sm:text-lg my-1">
                     {Math.round(day.main.temp)}°C
