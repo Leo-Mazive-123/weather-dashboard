@@ -1,13 +1,18 @@
 "use client";
+
 import { useState } from "react";
 import Image from "next/image";
 
 interface WeatherData {
   name: string;
+  main: {
+    temp: number;
+    temp_min: number;
+    temp_max: number;
+    humidity: number;
+  };
   weather: { main: string; description: string; icon: string }[];
-  main: { temp: number; temp_min: number; temp_max: number; humidity: number };
   wind: { speed: number };
-  cod: number;
 }
 
 interface ForecastItem {
@@ -17,18 +22,13 @@ interface ForecastItem {
   weather: { main: string; description: string; icon: string }[];
 }
 
-interface ForecastData {
-  cod: string;
-  list: ForecastItem[];
-}
-
 export default function Home() {
-  const [city, setCity] = useState<string>("");
+  const [city, setCity] = useState("");
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [forecast, setForecast] = useState<ForecastItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [hasSearched, setHasSearched] = useState<boolean>(false);
-  const [errorMsg, setErrorMsg] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const apiKey = "19797197dc030039d6a2322661d273a2";
 
@@ -52,9 +52,10 @@ export default function Home() {
       const weatherRes = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
       );
-      const weatherData: WeatherData = await weatherRes.json();
+      const weatherData: WeatherData & { cod: string | number; message?: string } =
+        await weatherRes.json();
 
-      if (weatherData.cod === 404) {
+      if (weatherData.cod === "404" || weatherData.cod === 404) {
         setWeather(null);
         setForecast([]);
         setHasSearched(false);
@@ -63,21 +64,21 @@ export default function Home() {
         return;
       }
 
-      if (weatherData.cod !== 200) throw new Error("Failed to fetch weather");
+      if (weatherData.cod !== 200) throw new Error(weatherData.message);
 
       setWeather(weatherData);
 
       const forecastRes = await fetch(
         `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`
       );
-      const forecastData: ForecastData = await forecastRes.json();
+      const forecastData: { list: ForecastItem[]; cod: string; message?: string } =
+        await forecastRes.json();
 
-      if (forecastData.cod !== "200") throw new Error("Failed to fetch forecast");
+      if (forecastData.cod !== "200") throw new Error(forecastData.message);
 
       const dailyForecast = forecastData.list.filter(
         (item: ForecastItem) => item.dt_txt.includes("12:00:00")
       );
-
       setForecast(dailyForecast);
       setHasSearched(true);
     } catch (error: any) {
@@ -113,6 +114,7 @@ export default function Home() {
           hasSearched ? `bg-gradient-to-br ${getBackgroundClass()}` : ""
         }`}
       >
+        {/* Back button */}
         {hasSearched && (
           <button
             onClick={handleBack}
@@ -123,9 +125,11 @@ export default function Home() {
         )}
 
         <h1 className="text-3xl md:text-4xl font-bold mb-6 drop-shadow-lg text-center">
-          🌦 Weather Dashboard <span className="text-sm italic">with Leo</span>
+          🌦 Weather Dashboard{" "}
+          <span className="text-sm italic">with Leo</span>
         </h1>
 
+        {/* Search */}
         <div className="flex flex-col sm:flex-row gap-2 mb-6 w-full max-w-md justify-center">
           <input
             type="text"
@@ -142,10 +146,17 @@ export default function Home() {
           </button>
         </div>
 
-        {errorMsg && <p className="text-red-500 mb-4 font-semibold text-center">{errorMsg}</p>}
+        {/* Error message */}
+        {errorMsg && (
+          <p className="text-red-500 mb-4 font-semibold text-center">
+            {errorMsg}
+          </p>
+        )}
 
+        {/* Loading */}
         {loading && <p className="mb-4 text-lg font-semibold">Loading...</p>}
 
+        {/* Weather Card */}
         {weather && (
           <div className="bg-white/20 backdrop-blur-md rounded-3xl p-6 shadow-xl text-center w-full max-w-[320px] mb-6 transition-all duration-500">
             <h2 className="text-2xl font-bold">{weather.name}</h2>
@@ -157,7 +168,9 @@ export default function Home() {
               height={100}
               className="mx-auto"
             />
-            <p className="text-5xl font-bold my-2">{Math.round(weather.main.temp)}°C</p>
+            <p className="text-5xl font-bold my-2">
+              {Math.round(weather.main.temp)}°C
+            </p>
             <div className="flex justify-center gap-6 mt-4">
               <div>
                 <p className="font-semibold">{weather.main.humidity}%</p>
@@ -171,6 +184,7 @@ export default function Home() {
           </div>
         )}
 
+        {/* Forecast Cards */}
         {forecast.length > 0 && (
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4 py-4 px-2 w-full max-w-5xl">
             {forecast.map((day, index) => {
@@ -200,10 +214,15 @@ export default function Home() {
                     height={64}
                     className="mx-auto"
                   />
-                  <p className="font-bold text-base sm:text-lg my-1">{Math.round(day.main.temp)}°C</p>
-                  <p className="text-[10px] sm:text-xs capitalize">{day.weather[0].description}</p>
+                  <p className="font-bold text-base sm:text-lg my-1">
+                    {Math.round(day.main.temp)}°C
+                  </p>
+                  <p className="text-[10px] sm:text-xs capitalize">
+                    {day.weather[0].description}
+                  </p>
                   <p className="text-[10px] sm:text-xs mt-1">
-                    Min: {Math.round(day.main.temp_min)}°C | Max: {Math.round(day.main.temp_max)}°C
+                    Min: {Math.round(day.main.temp_min)}°C | Max:{" "}
+                    {Math.round(day.main.temp_max)}°C
                   </p>
                 </div>
               );
