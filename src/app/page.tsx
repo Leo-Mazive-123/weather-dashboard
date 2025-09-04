@@ -59,7 +59,7 @@ export default function Home() {
     if (main.includes("rain") || main.includes("drizzle"))
       return "from-blue-700 to-gray-800";
     if (main.includes("snow")) return "from-white to-gray-300";
-    if (main.includes("clear")) return "from-yellow-400 to-orange-500";
+    if (main.includes("clear")) return "from-gray-400 to-gray-500";
     return "from-blue-400 to-indigo-600";
   };
 
@@ -192,7 +192,7 @@ export default function Home() {
               if (weatherMain.includes("cloud")) cardBg = "bg-gray-300/30";
               if (weatherMain.includes("rain")) cardBg = "bg-blue-300/30";
               if (weatherMain.includes("snow")) cardBg = "bg-white/40";
-              if (weatherMain.includes("clear")) cardBg = "bg-yellow-300/30";
+              if (weatherMain.includes("clear")) cardBg = "bg-gray-200/20";
 
               return (
                 <div
